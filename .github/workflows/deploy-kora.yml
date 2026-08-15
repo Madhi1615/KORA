@@ -64,6 +64,7 @@ jobs:
           npx --yes supabase@latest functions deploy quote-calculate --project-ref "$PROJECT_REF"
           npx --yes supabase@latest functions deploy available-guards --project-ref "$PROJECT_REF"
           npx --yes supabase@latest functions deploy invoice-generate --project-ref "$PROJECT_REF"
+          npx --yes supabase@latest functions deploy team --project-ref "$PROJECT_REF"
           npx --yes supabase@latest functions deploy employee-portal --project-ref "$PROJECT_REF" --no-verify-jwt
           npx --yes supabase@latest functions deploy whatsapp-webhook --project-ref "$PROJECT_REF" --no-verify-jwt
           npx --yes supabase@latest functions deploy whatsapp-outbound --project-ref "$PROJECT_REF"

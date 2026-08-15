@@ -2,10 +2,14 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 
+export type CompanyRole = 'owner' | 'dispatcher'
+
 interface AuthState {
   session: Session | null
   companyId: string | null
   companyName: string | null
+  role: CompanyRole | null
+  isAdmin: boolean
   loading: boolean
   signIn: (email: string, password: string) => Promise<string | null>
   signOut: () => Promise<void>
@@ -17,22 +21,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [companyId, setCompanyId] = useState<string | null>(null)
   const [companyName, setCompanyName] = useState<string | null>(null)
+  const [role, setRole] = useState<CompanyRole | null>(null)
   const [loading, setLoading] = useState(true)
 
   async function loadCompany(currentSession: Session | null) {
     if (!currentSession || !supabase) {
       setCompanyId(null)
       setCompanyName(null)
+      setRole(null)
       return
     }
     const { data: membership } = await supabase
       .from('company_members')
-      .select('company_id, companies(name)')
+      .select('company_id, role, companies(name)')
       .eq('user_id', currentSession.user.id)
       .limit(1)
       .maybeSingle()
     setCompanyId(membership?.company_id ?? null)
     setCompanyName((membership?.companies as unknown as { name: string } | null)?.name ?? null)
+    setRole((membership?.role as CompanyRole) ?? null)
   }
 
   useEffect(() => {
@@ -40,11 +47,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false)
       return
     }
-    supabase.auth.getSession().then(async ({ data }) => {
-      setSession(data.session)
-      await loadCompany(data.session)
-      setLoading(false)
-    })
+    supabase.auth
+      .getSession()
+      .then(async ({ data }) => {
+        setSession(data.session)
+        await loadCompany(data.session)
+      })
+      .catch(() => setSession(null))
+      .finally(() => setLoading(false))
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession)
       loadCompany(newSession)
@@ -63,7 +73,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, companyId, companyName, loading, signIn, signOut }}>
+    <AuthContext.Provider
+      value={{ session, companyId, companyName, role, isAdmin: role === 'owner', loading, signIn, signOut }}
+    >
       {children}
     </AuthContext.Provider>
   )

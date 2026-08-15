@@ -116,3 +116,10 @@ export interface AvailableGuard {
   eligible: boolean
   reason: string | null
 }
+
+export interface TeamMember {
+  user_id: string
+  role: 'owner' | 'dispatcher'
+  created_at: string
+  email: string
+}

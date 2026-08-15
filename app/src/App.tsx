@@ -11,6 +11,7 @@ import InvoiceView from './routes/InvoiceView'
 import EmployeePortal from './routes/EmployeePortal'
 import Subprocessors from './routes/Subprocessors'
 import Settings from './routes/Settings'
+import Reports from './routes/Reports'
 
 function ConfigWarning() {
   return (
@@ -34,8 +35,15 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
+function RequireAdmin({ children }: { children: ReactNode }) {
+  const { isAdmin, loading } = useAuth()
+  if (loading) return null
+  if (!isAdmin) return <Navigate to="/" replace />
+  return <>{children}</>
+}
+
 function Shell({ children }: { children: ReactNode }) {
-  const { session, companyName, signOut } = useAuth()
+  const { session, companyName, isAdmin, signOut } = useAuth()
   return (
     <>
       <header className="top-nav">
@@ -52,7 +60,9 @@ function Shell({ children }: { children: ReactNode }) {
               Dienstplan
             </NavLink>
             <NavLink to="/requests/new">Neue Anfrage</NavLink>
-            <NavLink to="/settings">Einstellungen</NavLink>
+            {isAdmin && <NavLink to="/reports">Berichte</NavLink>}
+            {isAdmin && <NavLink to="/settings">Einstellungen</NavLink>}
+            {isAdmin && <span className="role-badge">Admin</span>}
             <a role="button" onClick={() => signOut()}>
               Abmelden
             </a>
@@ -83,7 +93,22 @@ export default function App() {
                 <Route path="/planner/:requestId" element={<Planner />} />
                 <Route path="/quotes/:requestId" element={<QuoteView />} />
                 <Route path="/invoices/:requestId" element={<InvoiceView />} />
-                <Route path="/settings" element={<Settings />} />
+                <Route
+                  path="/reports"
+                  element={
+                    <RequireAdmin>
+                      <Reports />
+                    </RequireAdmin>
+                  }
+                />
+                <Route
+                  path="/settings"
+                  element={
+                    <RequireAdmin>
+                      <Settings />
+                    </RequireAdmin>
+                  }
+                />
               </Routes>
             </Shell>
           </RequireAuth>

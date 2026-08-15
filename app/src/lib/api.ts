@@ -1,5 +1,5 @@
 import { supabase, functionsBaseUrl } from './supabase'
-import type { AvailableGuard, Invoice, Quote } from '../types'
+import type { AvailableGuard, Invoice, Quote, TeamMember } from '../types'
 
 async function authedFetch(path: string, init?: RequestInit) {
   const { data } = await supabase!.auth.getSession()
@@ -46,6 +46,22 @@ export async function notifyProactive(companyId: string, event: string, extra: R
   return authedFetch('ai-assistant', {
     method: 'POST',
     body: JSON.stringify({ mode: 'proactive', company_id: companyId, event, ...extra }),
+  })
+}
+
+export async function fetchTeam(companyId: string): Promise<{ members: TeamMember[] }> {
+  return authedFetch(`team?company_id=${companyId}`)
+}
+
+export async function inviteTeamMember(
+  companyId: string,
+  email: string,
+  password: string,
+  role: 'owner' | 'dispatcher',
+): Promise<{ user_id: string; email: string }> {
+  return authedFetch('team', {
+    method: 'POST',
+    body: JSON.stringify({ company_id: companyId, email, password, role }),
   })
 }
 
