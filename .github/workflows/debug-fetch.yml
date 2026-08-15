@@ -1,0 +1,68 @@
+name: Debug Fetch
+
+# Temporary diagnostic: drives a real headless browser against a URL from GitHub's
+# runner (normal internet access) and reports console/page errors, failed requests,
+# and the rendered page text. Safe to delete once the issue is diagnosed.
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: URL to check
+        required: true
+        default: https://kora-app-wheat.vercel.app
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null
+          npm install playwright@latest
+          npx playwright install --with-deps chromium
+
+      - name: Load page and report
+        run: |
+          cat > check.js <<'EOF'
+          const { chromium } = require('playwright');
+
+          (async () => {
+            const browser = await chromium.launch();
+            const page = await browser.newPage();
+            const messages = [];
+            page.on('console', (msg) => messages.push(`[console.${msg.type()}] ${msg.text()}`));
+            page.on('pageerror', (err) => messages.push(`[pageerror] ${err.message}\n${err.stack}`));
+            page.on('requestfailed', (req) => messages.push(`[requestfailed] ${req.url()} — ${req.failure()?.errorText}`));
+            page.on('response', (res) => {
+              if (res.status() >= 400) messages.push(`[http ${res.status()}] ${res.url()}`);
+            });
+
+            await page.goto(process.argv[2], { waitUntil: 'networkidle', timeout: 20000 });
+            await page.waitForTimeout(2000);
+
+            const bodyText = await page.evaluate(() => document.body.innerText);
+            const rootHtml = await page.evaluate(() => document.getElementById('root')?.innerHTML?.slice(0, 800));
+            const htmlLang = await page.evaluate(() => document.documentElement.getAttribute('lang'));
+            const htmlTranslate = await page.evaluate(() => document.documentElement.getAttribute('translate'));
+
+            console.log('=== messages ===');
+            console.log(messages.join('\n') || '(none)');
+            console.log('=== html lang/translate attrs ===');
+            console.log(`lang=${htmlLang} translate=${htmlTranslate}`);
+            console.log('=== body innerText ===');
+            console.log(JSON.stringify(bodyText));
+            console.log('=== #root innerHTML (first 800 chars) ===');
+            console.log(rootHtml);
+
+            await browser.close();
+          })().catch((e) => {
+            console.error('SCRIPT ERROR', e);
+            process.exit(1);
+          });
+          EOF
+          node check.js "${{ github.event.inputs.url }}"
