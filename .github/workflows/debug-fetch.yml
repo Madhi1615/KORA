@@ -1,0 +1,68 @@
+name: Debug Fetch
+
+# One-off: create the first dispatcher login + company + membership. Safe to delete after use.
+on:
+  workflow_dispatch:
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.KORA_SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.KORA_SUPABASE_ANON_KEY }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.KORA_SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: ${{ secrets.KORA_SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Create auth user via signup endpoint
+        run: |
+          set -euo pipefail
+          http_code=$(curl -sS -o /tmp/signup-response.json -w "%{http_code}" \
+            -X POST "${SUPABASE_URL}/auth/v1/signup" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{"email":"admin@adminmadhi.com","password":"12345678"}')
+          echo "HTTP $http_code"
+          cat /tmp/signup-response.json
+          echo
+          if [ "$http_code" -ge 300 ] && [ "$http_code" -ne 400 ]; then
+            echo "::error::Signup failed with HTTP $http_code"
+            exit 1
+          fi
+
+      - name: Confirm email, create company, link membership
+        run: |
+          set -euo pipefail
+          cat > /tmp/provision.sql <<'SQL'
+          update auth.users set email_confirmed_at = coalesce(email_confirmed_at, now())
+          where email = 'admin@adminmadhi.com';
+
+          insert into companies (id, name, whatsapp_dispatcher_phone, vat_percent)
+          select gen_random_uuid(), 'KORA', null, 19
+          where not exists (select 1 from companies where name = 'KORA');
+
+          insert into company_members (company_id, user_id, role)
+          select c.id, u.id, 'owner'
+          from companies c, auth.users u
+          where c.name = 'KORA' and u.email = 'admin@adminmadhi.com'
+          and not exists (
+            select 1 from company_members cm where cm.company_id = c.id and cm.user_id = u.id
+          );
+
+          select c.id as company_id, u.id as user_id, u.email_confirmed_at
+          from companies c, auth.users u
+          where c.name = 'KORA' and u.email = 'admin@adminmadhi.com'
+          order by c.created_at desc limit 1;
+          SQL
+          jq -Rs '{query: .}' /tmp/provision.sql > /tmp/provision-query.json
+          http_code=$(curl -sS -o /tmp/provision-response.json -w "%{http_code}" \
+            -X POST "https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query" \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data-binary @/tmp/provision-query.json)
+          echo "HTTP $http_code"
+          cat /tmp/provision-response.json
+          echo
+          if [ "$http_code" -ge 300 ]; then
+            echo "::error::Provisioning SQL failed with HTTP $http_code"
+            exit 1
+          fi
