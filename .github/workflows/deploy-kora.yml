@@ -145,11 +145,22 @@ jobs:
             exit 0
           fi
           npx --yes vercel@latest link --yes --project=kora-app --token="$VERCEL_TOKEN"
+
+          # Keep Vercel's own env var store in sync too, so they're visible/editable in the
+          # Vercel dashboard and available to any build Vercel triggers on its own later.
           npx --yes vercel@latest env rm VITE_SUPABASE_URL production --yes --token="$VERCEL_TOKEN" || true
           npx --yes vercel@latest env rm VITE_SUPABASE_ANON_KEY production --yes --token="$VERCEL_TOKEN" || true
           echo "$SUPABASE_URL" | npx --yes vercel@latest env add VITE_SUPABASE_URL production --token="$VERCEL_TOKEN"
           echo "$SUPABASE_ANON_KEY" | npx --yes vercel@latest env add VITE_SUPABASE_ANON_KEY production --token="$VERCEL_TOKEN"
           npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+          # `vercel env add` writing to Vercel's servers and `vercel pull` reading them back
+          # a moment later is a round trip that can race — the write isn't always visible to
+          # the very next read. Overwrite the pulled env file with the values we already have
+          # in hand, so what gets built is guaranteed correct regardless of that propagation
+          # delay (this is what caused a previous deploy to bake in a broken Supabase URL).
+          printf 'VITE_SUPABASE_URL=%s\nVITE_SUPABASE_ANON_KEY=%s\n' "$SUPABASE_URL" "$SUPABASE_ANON_KEY" > .vercel/.env.production.local
+
           npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN"
           DEPLOY_URL=$(npx --yes vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN")
           echo "DEPLOY_URL=${DEPLOY_URL}" >> "$GITHUB_ENV"
