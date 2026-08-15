@@ -81,6 +81,7 @@ jobs:
         run: |
           set -euo pipefail
           INTERNAL_SECRET=$(openssl rand -hex 32)
+          echo "::add-mask::${INTERNAL_SECRET}"
           echo "INTERNAL_SECRET=${INTERNAL_SECRET}" >> "$GITHUB_ENV"
 
           args=(
