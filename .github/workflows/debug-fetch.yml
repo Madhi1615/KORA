@@ -1,0 +1,27 @@
+name: Debug Fetch
+
+# Temporary diagnostic: fetches a URL from GitHub's runner (which has normal internet
+# access) and prints response headers + body, to see exactly what's being served.
+# Safe to delete once the blank-page issue is diagnosed.
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: URL to fetch
+        required: true
+        default: https://kora-app-wheat.vercel.app
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch and report
+        run: |
+          echo "Fetching: ${{ github.event.inputs.url }}"
+          echo "--- HEADERS ---"
+          curl -sS -D - -o /tmp/body.html "${{ github.event.inputs.url }}"
+          echo "--- BODY (first 4000 chars) ---"
+          head -c 4000 /tmp/body.html
+          echo
+          echo "--- BODY LENGTH ---"
+          wc -c /tmp/body.html
