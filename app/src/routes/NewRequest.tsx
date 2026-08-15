@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
+import { useI18n } from '../lib/i18n'
 import type { Client, Qualification } from '../types'
 
 const GERMAN_STATES = [
@@ -12,6 +13,7 @@ const GERMAN_STATES = [
 
 export default function NewRequest() {
   const { companyId } = useAuth()
+  const { t } = useI18n()
   const navigate = useNavigate()
   const [clients, setClients] = useState<Client[]>([])
   const [title, setTitle] = useState('')
@@ -54,7 +56,7 @@ export default function NewRequest() {
 
     setSubmitting(false)
     if (insertError || !request) {
-      setError(insertError?.message ?? 'Anfrage konnte nicht gespeichert werden.')
+      setError(insertError?.message ?? t('newRequest.saveError'))
       return
     }
 
@@ -64,18 +66,18 @@ export default function NewRequest() {
   return (
     <div>
       <h1>
-        Neue Anfrage
-        <span className="sub">Wird zur Kalkulation und zum Dienstplan.</span>
+        {t('newRequest.title')}
+        <span className="sub">{t('newRequest.subtitle')}</span>
       </h1>
       <form onSubmit={handleSubmit} className="card" style={{ marginTop: 20, maxWidth: 560 }}>
         <div className="field">
-          <label htmlFor="title">Titel</label>
-          <input id="title" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="z. B. Messe München, Halle 3" />
+          <label htmlFor="title">{t('newRequest.titleLabel')}</label>
+          <input id="title" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('newRequest.titlePlaceholder')} />
         </div>
         <div className="field">
-          <label htmlFor="client">Kunde</label>
+          <label htmlFor="client">{t('newRequest.client')}</label>
           <select id="client" value={clientId} onChange={(e) => setClientId(e.target.value)}>
-            <option value="">Kein Kunde hinterlegt</option>
+            <option value="">{t('newRequest.noClient')}</option>
             {clients.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -85,11 +87,11 @@ export default function NewRequest() {
         </div>
         <div className="grid-2">
           <div className="field">
-            <label htmlFor="location">Einsatzort</label>
+            <label htmlFor="location">{t('newRequest.location')}</label>
             <input id="location" value={location} onChange={(e) => setLocation(e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="state">Bundesland</label>
+            <label htmlFor="state">{t('newRequest.state')}</label>
             <select id="state" value={federalState} onChange={(e) => setFederalState(e.target.value)}>
               {GERMAN_STATES.map((s) => (
                 <option key={s} value={s}>
@@ -101,31 +103,31 @@ export default function NewRequest() {
         </div>
         <div className="grid-2">
           <div className="field">
-            <label htmlFor="starts">Beginn</label>
+            <label htmlFor="starts">{t('newRequest.starts')}</label>
             <input id="starts" type="datetime-local" required value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="ends">Ende</label>
+            <label htmlFor="ends">{t('newRequest.ends')}</label>
             <input id="ends" type="datetime-local" required value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
           </div>
         </div>
         <div className="grid-2">
           <div className="field">
-            <label htmlFor="guards">Anzahl Kräfte</label>
+            <label htmlFor="guards">{t('newRequest.guardsRequired')}</label>
             <input id="guards" type="number" min={1} required value={guardsRequired} onChange={(e) => setGuardsRequired(Number(e.target.value))} />
           </div>
           <div className="field">
-            <label htmlFor="qualification">Qualifikation</label>
+            <label htmlFor="qualification">{t('newRequest.qualification')}</label>
             <select id="qualification" value={qualification} onChange={(e) => setQualification(e.target.value as Qualification)}>
-              <option value="unterrichtung">Unterrichtung (§ 34a)</option>
-              <option value="sachkunde">Sachkunde § 34a</option>
-              <option value="meister">Meister für Schutz und Sicherheit</option>
+              <option value="unterrichtung">{t('qualification.unterrichtung')}</option>
+              <option value="sachkunde">{t('qualification.sachkunde')}</option>
+              <option value="meister">{t('qualification.meister')}</option>
             </select>
           </div>
         </div>
         {error && <p className="error-text">{error}</p>}
         <button className="btn btn-primary" type="submit" disabled={submitting}>
-          {submitting ? 'Wird gespeichert …' : 'Anfrage anlegen'}
+          {submitting ? t('newRequest.saving') : t('newRequest.submit')}
         </button>
       </form>
     </div>

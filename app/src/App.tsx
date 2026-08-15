@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from './lib/AuthContext'
 import { isSupabaseConfigured } from './lib/supabase'
+import { useI18n } from './lib/i18n'
+import { LanguageSwitcher } from './components/LanguageSwitcher'
 import Login from './routes/Login'
 import Dashboard from './routes/Dashboard'
 import NewRequest from './routes/NewRequest'
@@ -14,13 +16,13 @@ import Settings from './routes/Settings'
 import Reports from './routes/Reports'
 
 function ConfigWarning() {
+  const { t } = useI18n()
   return (
     <div className="center-screen">
       <div className="card">
-        <h2>KORA ist noch nicht verbunden</h2>
+        <h2>{t('app.notConnected.title')}</h2>
         <p className="muted">
-          Es fehlen <code>VITE_SUPABASE_URL</code> und <code>VITE_SUPABASE_ANON_KEY</code>. Siehe
-          kora/README.md für die Einrichtung.
+          Es fehlen <code>VITE_SUPABASE_URL</code> und <code>VITE_SUPABASE_ANON_KEY</code>. {t('app.notConnected.body')}
         </p>
       </div>
     </div>
@@ -44,6 +46,7 @@ function RequireAdmin({ children }: { children: ReactNode }) {
 
 function Shell({ children }: { children: ReactNode }) {
   const { session, companyName, isAdmin, signOut } = useAuth()
+  const { t } = useI18n()
   return (
     <>
       <header className="top-nav">
@@ -57,14 +60,15 @@ function Shell({ children }: { children: ReactNode }) {
         {session && (
           <nav>
             <NavLink to="/" end>
-              Dienstplan
+              {t('nav.dashboard')}
             </NavLink>
-            <NavLink to="/requests/new">Neue Anfrage</NavLink>
-            {isAdmin && <NavLink to="/reports">Berichte</NavLink>}
-            {isAdmin && <NavLink to="/settings">Einstellungen</NavLink>}
-            {isAdmin && <span className="role-badge">Admin</span>}
+            <NavLink to="/requests/new">{t('nav.newRequest')}</NavLink>
+            {isAdmin && <NavLink to="/reports">{t('nav.reports')}</NavLink>}
+            {isAdmin && <NavLink to="/settings">{t('nav.settings')}</NavLink>}
+            {isAdmin && <span className="role-badge">{t('nav.admin')}</span>}
+            <LanguageSwitcher />
             <a role="button" onClick={() => signOut()}>
-              Abmelden
+              {t('nav.signOut')}
             </a>
           </nav>
         )}

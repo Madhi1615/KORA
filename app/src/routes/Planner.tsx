@@ -3,15 +3,14 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
 import { calculateQuote, fetchAvailableGuards, notifyProactive } from '../lib/api'
+import { useFormatters, useI18n } from '../lib/i18n'
 import type { AvailableGuard, Quote, ServiceRequest, Shift, ShiftAssignment } from '../types'
-
-function formatEuro(value: number) {
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value)
-}
 
 export default function Planner() {
   const { requestId } = useParams<{ requestId: string }>()
   const { companyId } = useAuth()
+  const { t } = useI18n()
+  const { euro, dateTime } = useFormatters()
   const navigate = useNavigate()
 
   const [request, setRequest] = useState<ServiceRequest | null>(null)
@@ -136,14 +135,14 @@ export default function Planner() {
     navigate(`/invoices/${requestId}`)
   }
 
-  if (!request || !shift) return <p className="muted">Lädt …</p>
+  if (!request || !shift) return <p className="muted">{t('portal.loading')}</p>
 
   return (
     <div>
       <h1>
         {request.title}
         <span className="sub">
-          {request.location} · {new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(request.starts_at))}
+          {request.location} · {dateTime(request.starts_at)}
         </span>
       </h1>
 
@@ -151,7 +150,7 @@ export default function Planner() {
 
       <div className="planner-grid" style={{ marginTop: 20 }}>
         <div>
-          <h3 style={{ fontSize: 15 }}>Verfügbares Personal</h3>
+          <h3 style={{ fontSize: 15 }}>{t('planner.availableStaff')}</h3>
           <div className="staff-list">
             {staff.map((s) => {
               const assigned = assignedIds.has(s.id)
@@ -165,12 +164,12 @@ export default function Planner() {
                   onClick={() => s.eligible && !assigned && assignGuard(s.id)}
                 >
                   <span>{s.name}</span>
-                  {!s.eligible && <span className="pill pill-danger">Kein Nachweis</span>}
-                  {assigned && <span className="pill">Eingeteilt</span>}
+                  {!s.eligible && <span className="pill pill-danger">{t('planner.noCredential')}</span>}
+                  {assigned && <span className="pill">{t('planner.assigned')}</span>}
                 </div>
               )
             })}
-            {staff.length === 0 && <p className="muted">Noch keine Mitarbeitenden angelegt (Einstellungen).</p>}
+            {staff.length === 0 && <p className="muted">{t('planner.noGuards')}</p>}
           </div>
         </div>
 
@@ -190,7 +189,7 @@ export default function Planner() {
             }}
           >
             <div className="muted">
-              {assignments.length} / {request.guards_required} besetzt — Kräfte hier ablegen oder links anklicken
+              {t('planner.slotsFilled', { filled: assignments.length, total: request.guards_required })}
             </div>
             <div style={{ marginTop: 8 }}>
               {assignments.map((a) => (
@@ -199,7 +198,7 @@ export default function Planner() {
                   <button
                     onClick={() => removeAssignment(a.id)}
                     style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--grey)' }}
-                    aria-label="Entfernen"
+                    aria-label={t('planner.remove')}
                   >
                     ×
                   </button>
@@ -210,48 +209,48 @@ export default function Planner() {
 
           {unassignedSlots > 0 && (
             <button className="btn btn-secondary" onClick={askForHelp} disabled={busy}>
-              KORA soll {unassignedSlots} verfügbare Kraft/Kräfte anfragen
+              {t('planner.askForHelp', { count: unassignedSlots })}
             </button>
           )}
 
           <div className="card" style={{ marginTop: 20 }}>
-            <h3 style={{ fontSize: 15 }}>Kalkulation</h3>
+            <h3 style={{ fontSize: 15 }}>{t('planner.calculation')}</h3>
             <div className="field" style={{ marginTop: 12 }}>
-              <label>Marge: {margin}%</label>
+              <label>{t('planner.margin', { percent: margin })}</label>
               <input type="range" min={0} max={60} value={margin} onChange={(e) => setMargin(Number(e.target.value))} />
             </div>
             {quote && (
               <div className="cost-panel">
                 <div className="cost-row">
-                  <span>Personalkosten</span>
-                  <span>{formatEuro(quote.hourly_cost)}</span>
+                  <span>{t('planner.personnelCost')}</span>
+                  <span>{euro(quote.hourly_cost)}</span>
                 </div>
                 <div className="cost-row">
-                  <span>Zuschläge</span>
-                  <span>{formatEuro(quote.premiums_cost)}</span>
+                  <span>{t('planner.premiums')}</span>
+                  <span>{euro(quote.premiums_cost)}</span>
                 </div>
                 <div className="cost-row">
-                  <span>Marge</span>
-                  <span>{formatEuro(quote.total - quote.subtotal)}</span>
+                  <span>{t('planner.marginLabel')}</span>
+                  <span>{euro(quote.total - quote.subtotal)}</span>
                 </div>
                 <div className="cost-row total">
-                  <span>Angebot</span>
-                  <span>{formatEuro(quote.total)}</span>
+                  <span>{t('planner.offer')}</span>
+                  <span>{euro(quote.total)}</span>
                 </div>
               </div>
             )}
             <div style={{ display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap' }}>
               <button className="btn btn-primary" onClick={requestQuotePdf} disabled={!quote}>
-                Angebot als PDF
+                {t('planner.offerPdf')}
               </button>
               <button className="btn btn-secondary" onClick={markExecuted} disabled={busy || assignments.length === 0}>
-                Schicht abschließen → Rechnung
+                {t('planner.completeShift')}
               </button>
             </div>
           </div>
 
           <p className="muted" style={{ marginTop: 12 }}>
-            <Link to={`/invoices/${requestId}`}>Zur Rechnung</Link>
+            <Link to={`/invoices/${requestId}`}>{t('planner.toInvoice')}</Link>
           </p>
         </div>
       </div>

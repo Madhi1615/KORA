@@ -1,9 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../lib/AuthContext'
+import { useI18n } from '../lib/i18n'
+import { LanguageSwitcher } from '../components/LanguageSwitcher'
 
 export default function Login() {
   const { session, signIn } = useAuth()
+  const { t } = useI18n()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -23,20 +26,23 @@ export default function Login() {
   return (
     <div className="center-screen">
       <div className="card">
-        <div className="brand-mark" style={{ marginBottom: 16 }}>
-          <span />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div className="brand-mark">
+            <span />
+          </div>
+          <LanguageSwitcher />
         </div>
-        <h2>Anmelden</h2>
+        <h2>{t('login.submit')}</h2>
         <p className="muted" style={{ marginBottom: 20 }}>
-          Dienstplan, Nachweis, Angebot und Rechnung an einem Ort.
+          {t('login.subtitle')}
         </p>
         <form onSubmit={handleSubmit}>
           <div className="field">
-            <label htmlFor="email">E-Mail</label>
+            <label htmlFor="email">{t('login.email')}</label>
             <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="password">Passwort</label>
+            <label htmlFor="password">{t('login.password')}</label>
             <input
               id="password"
               type="password"
@@ -47,11 +53,11 @@ export default function Login() {
           </div>
           {error && <p className="error-text">{error}</p>}
           <button className="btn btn-primary" type="submit" disabled={submitting} style={{ width: '100%', justifyContent: 'center' }}>
-            {submitting ? 'Einen Moment …' : 'Anmelden'}
+            {submitting ? t('login.submitting') : t('login.submit')}
           </button>
         </form>
         <p className="muted" style={{ marginTop: 16 }}>
-          Neuer Betrieb? Ein Konto wird in Supabase Authentication angelegt — siehe kora/README.md.
+          {t('login.newCompanyHint')}
         </p>
       </div>
     </div>

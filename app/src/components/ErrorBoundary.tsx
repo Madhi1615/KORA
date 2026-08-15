@@ -20,16 +20,29 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.error) {
+      // Deliberately independent of the i18n context — it lives outside this boundary, so a
+      // crash there must not also break this fallback. Detects the browser language directly.
+      const isGerman = typeof navigator !== 'undefined' && navigator.language?.toLowerCase().startsWith('de')
+      const text = isGerman
+        ? {
+            title: 'Da ist etwas schiefgelaufen',
+            body: 'Bitte lade die Seite neu. Falls dein Browser die Seite automatisch übersetzt hat, schalte die Übersetzung aus und lade danach neu.',
+            reload: 'Neu laden',
+          }
+        : {
+            title: 'Something went wrong',
+            body: 'Please reload the page. If your browser auto-translated this page, turn translation off first, then reload.',
+            reload: 'Reload',
+          }
       return (
         <div className="center-screen">
           <div className="card">
-            <h2>Da ist etwas schiefgelaufen</h2>
+            <h2>{text.title}</h2>
             <p className="muted" style={{ marginBottom: 20 }}>
-              Bitte lade die Seite neu. Falls dein Browser die Seite automatisch übersetzt hat, schalte die
-              Übersetzung aus und lade danach neu.
+              {text.body}
             </p>
             <button className="btn btn-primary" onClick={() => window.location.reload()}>
-              Neu laden
+              {text.reload}
             </button>
           </div>
         </div>

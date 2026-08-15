@@ -2,20 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
+import { useFormatters, useI18n } from '../lib/i18n'
 import type { RequestStatus } from '../types'
 
-function formatEuro(value: number) {
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value)
-}
-
-const STATUS_LABEL: Record<RequestStatus, string> = {
-  new: 'Neu',
-  quoted: 'Angebot erstellt',
-  planned: 'Geplant',
-  executed: 'Ausgeführt',
-  invoiced: 'Abgerechnet',
-  cancelled: 'Storniert',
-}
+const STATUSES: RequestStatus[] = ['new', 'quoted', 'planned', 'executed', 'invoiced', 'cancelled']
 
 interface ExpiringCredential {
   guard_id: string
@@ -26,6 +16,8 @@ interface ExpiringCredential {
 
 export default function Reports() {
   const { companyId } = useAuth()
+  const { t } = useI18n()
+  const { euro } = useFormatters()
   const [loading, setLoading] = useState(true)
   const [revenueThisMonth, setRevenueThisMonth] = useState(0)
   const [hoursThisMonth, setHoursThisMonth] = useState(0)
@@ -84,13 +76,13 @@ export default function Reports() {
   return (
     <div>
       <h1>
-        Berichte
-        <span className="sub">Auf einen Blick, was diesen Monat läuft.</span>
+        {t('reports.title')}
+        <span className="sub">{t('reports.subtitle')}</span>
       </h1>
 
       {loading && (
         <p className="muted" style={{ marginTop: 20 }}>
-          Lädt …
+          {t('reports.loading')}
         </p>
       )}
 
@@ -98,50 +90,50 @@ export default function Reports() {
         <>
           <div className="stat-grid" style={{ marginTop: 24 }}>
             <div className="stat-tile">
-              <div className="stat-label">Umsatz diesen Monat</div>
-              <div className="stat-value">{formatEuro(revenueThisMonth)}</div>
+              <div className="stat-label">{t('reports.revenueThisMonth')}</div>
+              <div className="stat-value">{euro(revenueThisMonth)}</div>
             </div>
             <div className="stat-tile">
-              <div className="stat-label">Stunden diesen Monat</div>
+              <div className="stat-label">{t('reports.hoursThisMonth')}</div>
               <div className="stat-value">{hoursThisMonth.toFixed(1)} h</div>
             </div>
             <div className="stat-tile">
-              <div className="stat-label">Aktive Kräfte</div>
+              <div className="stat-label">{t('reports.activeGuards')}</div>
               <div className="stat-value plain">
                 {activeGuards} <span className="muted" style={{ fontSize: 16 }}>/ {totalGuards}</span>
               </div>
             </div>
             <div className="stat-tile">
-              <div className="stat-label">Nachweise laufen bald ab</div>
+              <div className="stat-label">{t('reports.expiringSoon')}</div>
               <div className="stat-value plain">{expiring.length}</div>
             </div>
           </div>
 
           <div className="grid-2" style={{ marginTop: 24, alignItems: 'start' }}>
             <div className="card">
-              <h3 className="section-title">Anfragen nach Status</h3>
-              {(Object.keys(STATUS_LABEL) as RequestStatus[]).map((status) => (
+              <h3 className="section-title">{t('reports.byStatus')}</h3>
+              {STATUSES.map((status) => (
                 <div key={status} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderTop: '1px solid var(--line)' }}>
-                  <span className="muted">{STATUS_LABEL[status]}</span>
+                  <span className="muted">{t(`status.${status}`)}</span>
                   <strong>{statusCounts[status] ?? 0}</strong>
                 </div>
               ))}
             </div>
 
             <div className="card">
-              <h3 className="section-title">Nachweise, die bald ablaufen</h3>
+              <h3 className="section-title">{t('reports.expiringCredentials')}</h3>
               {expiring.map((c) => {
                 const expired = c.expires_at < today
                 return (
                   <div key={`${c.guard_id}-${c.qualification}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderTop: '1px solid var(--line)' }}>
-                    <span>{c.guards?.name ?? 'Unbekannt'}</span>
+                    <span>{c.guards?.name ?? t('reports.unknownGuard')}</span>
                     <span className={`pill ${expired ? 'pill-danger' : ''}`}>{c.expires_at}</span>
                   </div>
                 )
               })}
-              {expiring.length === 0 && <p className="muted">Nichts läuft in den nächsten 30 Tagen ab.</p>}
+              {expiring.length === 0 && <p className="muted">{t('reports.noneExpiring')}</p>}
               <p className="muted" style={{ marginTop: 12 }}>
-                Verwaltung der Nachweise unter <Link to="/settings">Einstellungen</Link>.
+                {t('reports.manageCredentialsPrefix')} <Link to="/settings">{t('nav.settings')}</Link>.
               </p>
             </div>
           </div>

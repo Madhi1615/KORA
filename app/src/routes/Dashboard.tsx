@@ -2,19 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
-import type { ServiceRequest } from '../types'
-
-const STATUS_LABEL: Record<string, string> = {
-  new: 'Neu',
-  quoted: 'Angebot erstellt',
-  planned: 'Geplant',
-  executed: 'Ausgeführt',
-  invoiced: 'Abgerechnet',
-  cancelled: 'Storniert',
-}
+import { useFormatters, useI18n } from '../lib/i18n'
+import type { RequestStatus, ServiceRequest } from '../types'
 
 export default function Dashboard() {
   const { companyId } = useAuth()
+  const { t } = useI18n()
+  const { dateTime } = useFormatters()
   const [requests, setRequests] = useState<ServiceRequest[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -34,15 +28,15 @@ export default function Dashboard() {
   return (
     <div>
       <h1>
-        Dienstplan
-        <span className="sub">Alle Anfragen auf einen Blick.</span>
+        {t('dashboard.title')}
+        <span className="sub">{t('dashboard.subtitle')}</span>
       </h1>
 
       <div style={{ marginTop: 20 }}>
-        {loading && <p className="muted">Lädt …</p>}
+        {loading && <p className="muted">{t('dashboard.loading')}</p>}
         {!loading && requests.length === 0 && (
           <div className="card">
-            <p className="muted">Noch keine Anfragen. Leg die erste unter „Neue Anfrage“ an.</p>
+            <p className="muted">{t('dashboard.empty')}</p>
           </div>
         )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -52,10 +46,10 @@ export default function Dashboard() {
                 <div>
                   <strong>{r.title}</strong>
                   <div className="muted">
-                    {r.clients?.name ?? 'Kein Kunde hinterlegt'} · {new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(r.starts_at))}
+                    {r.clients?.name ?? t('dashboard.noClient')} · {dateTime(r.starts_at)}
                   </div>
                 </div>
-                <span className="pill">{STATUS_LABEL[r.status] ?? r.status}</span>
+                <span className="pill">{t(`status.${r.status as RequestStatus}`)}</span>
               </div>
             </Link>
           ))}
