@@ -1,0 +1,76 @@
+name: Debug Fetch
+
+# Temporary diagnostic. Safe to delete once the issue is diagnosed.
+on:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null
+          npm install playwright@latest
+          npx playwright install --with-deps chromium
+
+      - name: Login, check admin UI, switch language
+        run: |
+          cat > check.js <<'EOF'
+          const { chromium } = require('playwright');
+
+          (async () => {
+            const browser = await chromium.launch();
+            const page = await browser.newPage();
+            const messages = [];
+            page.on('console', (msg) => { if (msg.type() === 'error') messages.push(`[console.error] ${msg.text()}`); });
+            page.on('pageerror', (err) => messages.push(`[pageerror] ${err.message}`));
+            page.on('requestfailed', (req) => messages.push(`[requestfailed] ${req.url()} — ${req.failure()?.errorText}`));
+
+            await page.goto('https://kora-app-wheat.vercel.app/login', { waitUntil: 'networkidle', timeout: 20000 });
+            await page.fill('#email', 'admin@adminmadhi.com');
+            await page.fill('#password', '12345678');
+            await page.click('button[type="submit"]');
+            await page.waitForURL('**/', { timeout: 15000 }).catch(() => {});
+            await page.waitForTimeout(1500);
+
+            const urlAfterLogin = page.url();
+            const navText = await page.evaluate(() => document.querySelector('.top-nav nav')?.innerText ?? '(no nav)');
+
+            // Switch to English
+            const enButton = await page.getByRole('button', { name: 'EN', exact: true });
+            await enButton.click();
+            await page.waitForTimeout(500);
+            const navTextEn = await page.evaluate(() => document.querySelector('.top-nav nav')?.innerText ?? '(no nav)');
+
+            // Visit reports
+            await page.goto('https://kora-app-wheat.vercel.app/reports', { waitUntil: 'networkidle', timeout: 15000 });
+            await page.waitForTimeout(1000);
+            const reportsBodyText = await page.evaluate(() => document.body.innerText.slice(0, 400));
+            const statTileCount = await page.evaluate(() => document.querySelectorAll('.stat-tile').length);
+
+            console.log('=== URL after login ===');
+            console.log(urlAfterLogin);
+            console.log('=== nav text (DE) ===');
+            console.log(navText);
+            console.log('=== nav text (EN, after clicking EN) ===');
+            console.log(navTextEn);
+            console.log('=== reports stat tile count ===');
+            console.log(statTileCount);
+            console.log('=== reports body text (first 400 chars) ===');
+            console.log(reportsBodyText);
+            console.log('=== console/page errors ===');
+            console.log(messages.join('\n') || '(none)');
+
+            await browser.close();
+          })().catch((e) => {
+            console.error('SCRIPT ERROR', e);
+            process.exit(1);
+          });
+          EOF
+          node check.js
