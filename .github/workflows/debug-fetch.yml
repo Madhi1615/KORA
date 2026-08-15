@@ -17,11 +17,22 @@ jobs:
     steps:
       - name: Fetch and report
         run: |
-          echo "Fetching: ${{ github.event.inputs.url }}"
+          BASE="${{ github.event.inputs.url }}"
+          echo "Fetching: $BASE"
           echo "--- HEADERS ---"
-          curl -sS -D - -o /tmp/body.html "${{ github.event.inputs.url }}"
+          curl -sS -D - -o /tmp/body.html "$BASE"
           echo "--- BODY (first 4000 chars) ---"
           head -c 4000 /tmp/body.html
           echo
           echo "--- BODY LENGTH ---"
           wc -c /tmp/body.html
+
+          JS_PATH=$(grep -oE '/assets/index-[A-Za-z0-9]+\.js' /tmp/body.html | head -1)
+          CSS_PATH=$(grep -oE '/assets/index-[A-Za-z0-9]+\.css' /tmp/body.html | head -1)
+          echo "--- JS ASSET: $JS_PATH ---"
+          curl -sS -o /dev/null -w "HTTP %{http_code}, content-type: %{content_type}, size: %{size_download} bytes\n" "$BASE$JS_PATH"
+          echo "--- CSS ASSET: $CSS_PATH ---"
+          curl -sS -o /dev/null -w "HTTP %{http_code}, content-type: %{content_type}, size: %{size_download} bytes\n" "$BASE$CSS_PATH"
+          echo "--- JS first 300 bytes ---"
+          curl -sS "$BASE$JS_PATH" | head -c 300
+          echo
