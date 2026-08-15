@@ -134,12 +134,15 @@ jobs:
           fi
 
       - name: Deploy frontend to Vercel
-        if: ${{ secrets.KORA_VERCEL_TOKEN != '' }}
         working-directory: app
         env:
           VERCEL_TOKEN: ${{ secrets.KORA_VERCEL_TOKEN }}
         run: |
           set -euo pipefail
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "KORA_VERCEL_TOKEN not set — skipping frontend deploy."
+            exit 0
+          fi
           npx --yes vercel@latest link --yes --project=kora-app --token="$VERCEL_TOKEN"
           npx --yes vercel@latest env rm VITE_SUPABASE_URL production --yes --token="$VERCEL_TOKEN" || true
           npx --yes vercel@latest env rm VITE_SUPABASE_ANON_KEY production --yes --token="$VERCEL_TOKEN" || true
